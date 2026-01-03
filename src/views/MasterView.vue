@@ -2,7 +2,9 @@
   <div class="flex h-screen w-screen bg-lumina-bg text-lumina-text overflow-hidden">
 
     <!-- Sidebar -->
-    <aside class="flex w-64 flex-col border-r border-slate-800 bg-slate-900/50 backdrop-blur-md">
+    <!-- Sidebar -->
+    <aside
+      :class="['flex flex-col border-r border-slate-800 bg-slate-900/50 backdrop-blur-md transition-all duration-300 overflow-hidden', isSidebarOpen ? 'w-64' : 'w-0 border-none']">
       <!-- Brand -->
       <div class="p-6 border-b border-slate-800">
         <button @click="$router.push('/dashboard')"
@@ -105,6 +107,14 @@
       <header
         class="flex h-14 items-center justify-between border-b border-slate-800 px-6 bg-lumina-bg/80 backdrop-blur">
         <div class="flex items-center gap-4 text-sm font-medium text-slate-400">
+          <button @click="isSidebarOpen = !isSidebarOpen" class="text-slate-400 hover:text-white md:hidden">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="3" y1="12" x2="21" y2="12"></line>
+              <line x1="3" y1="6" x2="21" y2="6"></line>
+              <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
+          </button>
           <button @click="viewMode = 'grid'"
             :class="viewMode === 'grid' ? 'text-white' : 'hover:text-white'">Grid</button>
           <button @click="viewMode = 'small'"
@@ -224,6 +234,7 @@ const blurMode = ref(false)
 const lightboxAsset = ref(null)
 const showSettings = ref(false)
 const streamHiddenState = ref(false)
+const isSidebarOpen = ref(true)
 
 const { storage, providerType, setConfig } = useStorage()
 const channel = ref(null)
@@ -236,6 +247,9 @@ const linkJoinCopied = ref(false)
 
 // --- Lifecycle ---
 onMounted(async () => {
+  // Initialize sidebar based on screen width
+  isSidebarOpen.value = window.innerWidth >= 768
+
   // 0. Check User Auth
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
@@ -375,28 +389,19 @@ const handleUploads = async (files) => {
 
       // 2. Upload Storage
       const safeName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`
-      // Note: storage.upload expects (file, path). 
-      // For Supabase: path = sessions/id/filename
-      // For Cloudinary: path = sessions/id/filename (we parse folder from it) OR just filename?
-      // Our Service abstraction expects 'path' to be the full relative path if possible.
-
       const filePath = `sessions/${sessionId}/${safeName}`
 
-      const { path: uploadedPath, url: uploadedUrl, error: storageError } = await storage.value.upload(compressedFile, filePath)
+      const { path: uploadedPath, error: storageError } = await storage.value.upload(compressedFile, filePath)
 
       if (storageError) throw storageError
 
       // 3. Register DB
-      const { data: newAsset, error: dbError } = await supabase
-        .from('session_assets')
-        .insert({
-          session_id: sessionId,
-          file_name: safeName,
-          storage_path: uploadedPath, // Save the path returned by provider (Supabase: path, Cloudinary: public_id)
-          is_revealed: false
-        })
-        .select()
-        .single()
+      const { data: newAsset, error: dbError } = await supabase.from('session_assets').insert({
+        session_id: sessionId,
+        file_name: safeName,
+        storage_path: uploadedPath,
+        is_revealed: false
+      }).select().single()
 
       if (dbError) throw dbError
 
@@ -531,7 +536,11 @@ const setupRealtime = () => {
 }
 
 const endSession = async () => {
-  if (!confirm('EXTREMELY DESTRUCTIVE ACTION:\n\nThis will delete the session and ALL IMAGES permanently from the server.\n\nAre you sure you want to end?')) {
+  if (!confirm(`EXTREMELY DESTRUCTIVE ACTION:
+
+This will delete the session and ALL IMAGES permanently from the server.
+
+Are you sure you want to end?`)) {
     return
   }
 
@@ -615,7 +624,7 @@ const openLightbox = (asset) => {
 const closeLightbox = () => lightboxAsset.value = null
 
 const gridClasses = computed(() => {
-  if (viewMode.value === 'small') return 'grid-cols-4 sm:grid-cols-6 md:grid-cols-8'
+  if (viewMode.value === 'small') return 'grid-cols-2 sm:grid-cols-6 md:grid-cols-8'
   return 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'
 })
 </script>
