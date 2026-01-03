@@ -431,7 +431,7 @@ const deleteAsset = async (asset) => {
 
   if (storageError) {
     console.error('Failed to delete file from storage:', storageError)
-    // Optional: alert user, but the item is gone from the UI anyway
+    alert('Warning: Image deleted from DB but failed to delete from Cloud provider:\n' + storageError.message)
   }
 
   fetchAssets()

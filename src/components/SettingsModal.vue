@@ -1,9 +1,8 @@
 <template>
   <div v-if="isOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
-    <div
-      class="bg-lumina-card w-full max-w-md rounded-xl border border-slate-700 p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
-      <div class="mb-4 flex items-center justify-between">
-        <h2 class="text-xl font-semibold text-white">Settings</h2>
+    <div class="bg-lumina-card w-full max-w-sm rounded-xl border border-slate-700 p-6 shadow-2xl">
+      <div class="mb-6 flex items-center justify-between">
+        <h2 class="text-xl font-semibold text-white">Storage Provider</h2>
         <button @click="$emit('close')" class="text-slate-400 hover:text-white">
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -13,76 +12,58 @@
         </button>
       </div>
 
-      <div class="space-y-4">
+      <div class="space-y-6">
+        <p class="text-sm text-slate-400">Select which service to use for storing images. Credentials are loaded from
+          your <code class="bg-slate-800 px-1 rounded">.env</code> file.</p>
 
-        <!-- Provider Selector -->
-        <div>
-          <label class="mb-1 block text-sm font-medium text-slate-300">Storage Provider</label>
-          <div class="flex gap-2 p-1 bg-slate-800 rounded-lg">
-            <button @click="activeTab = 'supabase'" class="flex-1 py-1 text-sm font-medium rounded transition-colors"
-              :class="activeTab === 'supabase' ? 'bg-slate-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'">
-              Supabase
-            </button>
-            <button @click="activeTab = 'cloudinary'" class="flex-1 py-1 text-sm font-medium rounded transition-colors"
-              :class="activeTab === 'cloudinary' ? 'bg-slate-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'">
-              Cloudinary
-            </button>
-          </div>
-        </div>
-
-        <div v-if="activeTab === 'supabase'" class="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
-          <div>
-            <label class="mb-1 block text-sm font-medium text-slate-300">Supabase URL</label>
-            <input v-model="form.supabase.url" type="text" placeholder="https://xyz.supabase.co"
-              class="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white placeholder-slate-500 focus:border-stone-400 focus:ring-1 focus:ring-stone-400 outline-none">
-          </div>
-          <div>
-            <label class="mb-1 block text-sm font-medium text-slate-300">Supabase Anon Key</label>
-            <input v-model="form.supabase.key" type="password" placeholder="public-anon-key"
-              class="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white placeholder-slate-500 focus:border-stone-400 focus:ring-1 focus:ring-stone-400 outline-none">
-          </div>
-          <div>
-            <label class="mb-1 block text-sm font-medium text-slate-300">Bucket Name</label>
-            <input v-model="form.supabase.bucket" type="text" placeholder="images"
-              class="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white placeholder-slate-500 focus:border-stone-400 focus:ring-1 focus:ring-stone-400 outline-none">
-          </div>
-        </div>
-
-        <div v-if="activeTab === 'cloudinary'" class="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
-          <div>
-            <label class="mb-1 block text-sm font-medium text-slate-300">Cloud Name</label>
-            <input v-model="form.cloudinary.cloudName" type="text" placeholder="e.g. demo"
-              class="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white placeholder-slate-500 focus:border-stone-400 focus:ring-1 focus:ring-stone-400 outline-none">
-          </div>
-          <div>
-            <label class="mb-1 block text-sm font-medium text-slate-300">Upload Preset (Unsigned)</label>
-            <input v-model="form.cloudinary.uploadPreset" type="text" placeholder="e.g. ml_default"
-              class="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white placeholder-slate-500 focus:border-stone-400 focus:ring-1 focus:ring-stone-400 outline-none">
-            <p class="text-xs text-slate-500 mt-1">Found in Settings > Upload > Upload presets. Mode must be 'Unsigned'.
-            </p>
-          </div>
-          <div class="pt-2 border-t border-slate-700">
-            <label class="mb-1 block text-sm font-medium text-slate-300 flex justify-between">
-              <span>API Key & Secret</span>
-              <span class="text-xs text-yellow-500 font-normal">Optional (For Deletion)</span>
-            </label>
-            <div class="grid grid-cols-2 gap-2">
-              <input v-model="form.cloudinary.apiKey" type="text" placeholder="API Key"
-                class="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white placeholder-slate-500 focus:border-stone-400 focus:ring-1 focus:ring-stone-400 outline-none">
-              <input v-model="form.cloudinary.apiSecret" type="password" placeholder="API Secret"
-                class="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white placeholder-slate-500 focus:border-stone-400 focus:ring-1 focus:ring-stone-400 outline-none">
+        <div class="space-y-3">
+          <button @click="activeTab = 'supabase'"
+            class="w-full flex items-center justify-between p-4 rounded-lg border transition-all"
+            :class="activeTab === 'supabase' ? 'border-green-500 bg-slate-800/50' : 'border-slate-700 bg-slate-800 hover:border-slate-500'">
+            <div class="flex items-center gap-3">
+              <div class="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 border border-slate-700">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                  stroke="#3ECF8E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path
+                    d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
+                </svg>
+              </div>
+              <div class="text-left">
+                <div class="font-medium text-white">Supabase</div>
+                <div class="text-xs text-slate-400">Default Storage</div>
+              </div>
             </div>
-            <p class="text-xs text-slate-500 mt-1">Required only if you want to DELETE images from Cloudinary via this
-              app. <span class="text-red-400">Not secure for public apps.</span></p>
-          </div>
-        </div>
+            <div v-if="activeTab === 'supabase'"
+              class="h-4 w-4 rounded-full bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]"></div>
+          </button>
 
+          <button @click="activeTab = 'cloudinary'"
+            class="w-full flex items-center justify-between p-4 rounded-lg border transition-all"
+            :class="activeTab === 'cloudinary' ? 'border-blue-500 bg-slate-800/50' : 'border-slate-700 bg-slate-800 hover:border-slate-500'">
+            <div class="flex items-center gap-3">
+              <div class="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 border border-slate-700">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                  stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M17.5 19c0-1.7-1.3-3-3-3h-11c-1.7 0-3-1.3-3-3s1.3-3 3-3h1" />
+                  <path d="M5.5 13c-1.7 0-3-1.3-3-3s1.3-3 3-3 3 1.3 3 3v2" />
+                  <path d="M22 10c0-4-3-6-5.5-6C14 4 13 6 13 6c-2.5 0-5.5 2-5.5 6h13c1.5 0 1.5 1.3 1.5 2z" />
+                </svg>
+              </div>
+              <div class="text-left">
+                <div class="font-medium text-white">Cloudinary</div>
+                <div class="text-xs text-slate-400">Optimized Delivery</div>
+              </div>
+            </div>
+            <div v-if="activeTab === 'cloudinary'"
+              class="h-4 w-4 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]"></div>
+          </button>
+        </div>
       </div>
 
-      <div class="mt-6 flex justify-end">
+      <div class="mt-8 flex justify-end">
         <button @click="save"
-          class="rounded-lg bg-stone-100 px-4 py-2 text-sm font-medium text-stone-900 hover:bg-white focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2 focus:ring-offset-slate-900">
-          Save & Connect
+          class="w-full rounded-lg bg-white py-2.5 text-sm font-bold text-slate-900 hover:bg-slate-200 transition-colors">
+          Apply Changes
         </button>
       </div>
     </div>
@@ -96,63 +77,36 @@ import { useStorage } from '../composables/useStorage'
 const props = defineProps(['isOpen'])
 const emit = defineEmits(['close'])
 
-const { providerType, providerConfig, setConfig } = useStorage()
+const { providerType, setConfig } = useStorage()
 
 const activeTab = ref('supabase')
 
-const form = ref({
-  supabase: {
-    url: '',
-    key: '',
-    bucket: 'images'
-  },
-  cloudinary: {
-    cloudName: '',
-    uploadPreset: '',
-    apiKey: '',
-    apiSecret: ''
-  }
-})
-
 onMounted(() => {
-  // Load current global state
   activeTab.value = providerType.value
-
-  // Populate form based on what we have or existing defaults
-  // Note: LocalStorage logic already ran in useStorage, but we can double check individual LS Items if we want to support switching back and forth preserving data
-  // For now let's just create a logical mapping
-
-  // Try to recover separate configs from LS to allow toggling without data loss
-  const savedSupabase = JSON.parse(localStorage.getItem('lumina_supabase_config') || '{}')
-  const savedCloudinary = JSON.parse(localStorage.getItem('lumina_cloudinary_config') || '{}')
-
-  form.value.supabase = { ...form.value.supabase, ...savedSupabase }
-  form.value.cloudinary = { ...form.value.cloudinary, ...savedCloudinary }
-
-  // If useStorage matches one of them, ensure it syncs (though it should come from the same source eventually)
-  if (providerType.value === 'supabase') {
-    form.value.supabase = { ...form.value.supabase, ...providerConfig.value }
-  } else if (providerType.value === 'cloudinary') {
-    form.value.cloudinary = { ...form.value.cloudinary, ...providerConfig.value }
-  }
 })
 
 const save = () => {
+  const envSupabase = {
+    url: import.meta.env.VITE_SUPABASE_URL || '',
+    key: import.meta.env.VITE_SUPABASE_ANON_KEY || '',
+    bucket: import.meta.env.VITE_SUPABASE_BUCKET || 'images'
+  }
+
+  const envCloudinary = {
+    cloudName: import.meta.env.VITE_CLOUDINARY_CLOUD_NAME?.trim() || '',
+    uploadPreset: import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET?.trim() || '',
+    apiKey: import.meta.env.VITE_CLOUDINARY_API_KEY?.trim() || '',
+    apiSecret: import.meta.env.VITE_CLOUDINARY_API_SECRET?.trim() || ''
+  }
+
   if (activeTab.value === 'supabase') {
-    if (!form.value.supabase.url || !form.value.supabase.key || !form.value.supabase.bucket) {
-      alert('Please fill all Supabase fields')
-      return
-    }
-    setConfig('supabase', form.value.supabase)
-    // Legacy support: also save simple item for other parts if any (MasterView currently relies on global supabase client, but for Storage we use custom)
-    localStorage.setItem('lumina_supabase_config', JSON.stringify(form.value.supabase))
+    setConfig('supabase', envSupabase)
+    // Clear custom legacy setting to revert to env/default? Or just save overwrite?
+    // We save to ensure persistance across reloads
+    localStorage.setItem('lumina_supabase_config', JSON.stringify(envSupabase))
   } else {
-    if (!form.value.cloudinary.cloudName || !form.value.cloudinary.uploadPreset) {
-      alert('Please fill Cloud Name and Upload Preset')
-      return
-    }
-    setConfig('cloudinary', form.value.cloudinary)
-    localStorage.setItem('lumina_cloudinary_config', JSON.stringify(form.value.cloudinary))
+    setConfig('cloudinary', envCloudinary)
+    localStorage.setItem('lumina_cloudinary_config', JSON.stringify(envCloudinary))
   }
 
   emit('close')

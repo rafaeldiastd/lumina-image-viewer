@@ -50,10 +50,10 @@ export class SupabaseStorageProvider {
 
 export class CloudinaryStorageProvider {
     constructor(config) {
-        this.cloudName = config.cloudName
-        this.uploadPreset = config.uploadPreset
-        this.apiKey = config.apiKey
-        this.apiSecret = config.apiSecret
+        this.cloudName = config.cloudName?.trim()
+        this.uploadPreset = config.uploadPreset?.trim()
+        this.apiKey = config.apiKey?.trim()
+        this.apiSecret = config.apiSecret?.trim()
         // Config validation
         if (!this.cloudName || !this.uploadPreset) {
             console.warn('Cloudinary Provider: Missing cloudName or uploadPreset')
@@ -101,7 +101,7 @@ export class CloudinaryStorageProvider {
         // We will attempt to use the API Key/Secret if provided to generate a signature (mocked/simplified).
 
         if (!this.apiKey || !this.apiSecret) {
-            return { error: new Error('Deleting from Cloudinary requires API Key & Secret (Not recommended for public clients)') }
+            return { error: new Error('Missing API Key or Secret. Cannot delete from Cloudinary.') }
         }
 
         // NOTE: This usually requires a backend to sign the request to protect the Secret.
@@ -124,7 +124,8 @@ export class CloudinaryStorageProvider {
             })
             const data = await res.json()
             if (data.result !== 'ok') {
-                return { error: new Error('Cloudinary delete failed: ' + (data.error?.message || data.result)) }
+                console.error('Cloudinary Destroy Error Response:', data)
+                return { error: new Error(data.error?.message || `Cloudinary result: ${data.result}`) }
             }
             return {}
         } catch (e) {
@@ -141,6 +142,9 @@ export class CloudinaryStorageProvider {
 
     // Simple SHA-1 for signature (using Web Crypto API)
     async generateSignature(str) {
+        if (!crypto || !crypto.subtle) {
+            throw new Error('Secure Context required (HTTPS or localhost) for Cloudinary signature generation.')
+        }
         const msgBuffer = new TextEncoder().encode(str)
         const hashBuffer = await crypto.subtle.digest('SHA-1', msgBuffer)
         const hashArray = Array.from(new Uint8Array(hashBuffer))
