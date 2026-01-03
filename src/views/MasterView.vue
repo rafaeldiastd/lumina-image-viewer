@@ -68,6 +68,17 @@
 
         <div class="space-y-1">
           <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Settings</p>
+          <button @click="showSettings = true"
+            class="flex w-full items-center gap-2 rounded px-2 py-1.5 text-xs text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path
+                d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+              </path>
+            </svg>
+            Storage & Keys
+          </button>
           <button @click="endSession"
             class="flex w-full items-center gap-2 rounded px-2 py-1.5 text-xs text-red-400 hover:bg-slate-800 transition-colors">
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
@@ -185,14 +196,17 @@
       @show-stream="restoreStream" />
 
   </div>
+  <SettingsModal :isOpen="showSettings" @close="showSettings = false" />
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { supabase } from '../lib/supabaseClient'
+import { useStorage } from '../composables/useStorage'
 import imageCompression from 'browser-image-compression'
 import Lightbox from '../components/Lightbox.vue'
+import SettingsModal from '../components/SettingsModal.vue'
 
 // --- State ---
 const route = useRoute()
@@ -204,9 +218,10 @@ const assets = ref([]) // Source of Truth (DB records)
 const viewMode = ref('grid')
 const blurMode = ref(false)
 const lightboxAsset = ref(null)
+const showSettings = ref(false)
 const streamHiddenState = ref(false)
 
-const bucketName = 'images'
+const { storage, providerType } = useStorage()
 const channel = ref(null)
 
 // Upload State
@@ -252,9 +267,12 @@ onMounted(async () => {
 })
 
 const syncStorageToDb = async () => {
+  // Sync only supported for Supabase for now, as Cloudinary list requires Admin API
+  if (providerType.value !== 'supabase') return
+
   // 1. List files in actual storage
   const { data: files, error } = await supabase.storage
-    .from(bucketName)
+    .from(storage.value.bucket || 'images')
     .list(`sessions/${sessionId}`, { limit: 100 })
 
   if (error) {
@@ -345,10 +363,14 @@ const handleUploads = async (files) => {
 
       // 2. Upload Storage
       const safeName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`
+      // Note: storage.upload expects (file, path). 
+      // For Supabase: path = sessions/id/filename
+      // For Cloudinary: path = sessions/id/filename (we parse folder from it) OR just filename?
+      // Our Service abstraction expects 'path' to be the full relative path if possible.
+
       const filePath = `sessions/${sessionId}/${safeName}`
-      const { error: storageError } = await supabase.storage
-        .from(bucketName)
-        .upload(filePath, compressedFile)
+
+      const { path: uploadedPath, url: uploadedUrl, error: storageError } = await storage.value.upload(compressedFile, filePath)
 
       if (storageError) throw storageError
 
@@ -357,8 +379,8 @@ const handleUploads = async (files) => {
         .from('session_assets')
         .insert({
           session_id: sessionId,
-          file_name: safeName, // Store the FULL name so it matches storage
-          storage_path: filePath,
+          file_name: safeName,
+          storage_path: uploadedPath, // Save the path returned by provider (Supabase: path, Cloudinary: public_id)
           is_revealed: false
         })
 
@@ -405,7 +427,7 @@ const deleteAsset = async (asset) => {
   }
 
   // 2. Delete Storage
-  const { error: storageError } = await supabase.storage.from(bucketName).remove([asset.storage_path])
+  const { error: storageError } = await storage.value.delete(asset.storage_path)
 
   if (storageError) {
     console.error('Failed to delete file from storage:', storageError)
@@ -435,7 +457,8 @@ const broadcastImage = async () => {
       payload: {
         imgName: asset.file_name,
         path: asset.storage_path,
-        displayName: asset.display_name || getDisplayName(asset.file_name) // Send Display Name
+        displayName: asset.display_name || getDisplayName(asset.file_name), // Send Display Name
+        url: getAssetUrl(asset) // Send resolved URL so StreamView doesn't need provider config
       }
     })
   }
@@ -498,13 +521,19 @@ const endSession = async () => {
 
   try {
     // 1. Clean Storage (List first, then remove)
-    const { data: files } = await supabase.storage
-      .from(bucketName)
-      .list(`sessions/${sessionId}`, { limit: 1000 })
+    // Only for supabase for now
+    if (providerType.value === 'supabase') {
+      const { data: files } = await supabase.storage
+        .from(storage.value.bucket || 'images')
+        .list(`sessions/${sessionId}`, { limit: 1000 })
 
-    if (files && files.length > 0) {
-      const filesToRemove = files.map(f => `sessions/${sessionId}/${f.name}`)
-      await supabase.storage.from(bucketName).remove(filesToRemove)
+      if (files && files.length > 0) {
+        const filesToRemove = files.map(f => `sessions/${sessionId}/${f.name}`)
+        await supabase.storage.from(storage.value.bucket || 'images').remove(filesToRemove)
+      }
+    } else {
+      // For Cloudinary, we'd need to delete by prefix or tag, which usually requires Admin API.
+      console.warn('Bulk delete not fully supported for Cloudinary in client-side only mode. Images may remain in Cloud.')
     }
 
     // 2. Delete Session (Cascade should handle assets, but let's be safe)
@@ -529,8 +558,7 @@ const endSession = async () => {
 // --- Helpers ---
 
 const getAssetUrl = (asset) => {
-  const { data } = supabase.storage.from(bucketName).getPublicUrl(asset.storage_path)
-  return data.publicUrl
+  return storage.value.getUrl(asset.storage_path)
 }
 
 const getCardClasses = (asset) => {

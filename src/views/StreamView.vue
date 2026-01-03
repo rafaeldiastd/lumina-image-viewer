@@ -39,13 +39,19 @@ const setupRealtime = () => {
 
     channel
         .on('broadcast', { event: 'show_image' }, ({ payload }) => {
-            if (payload && payload.imgName) {
-                const path = payload.path || `sessions/${sessionId}/${payload.imgName}`
-                const { data } = supabase.storage.from(bucketName).getPublicUrl(path)
+            if (payload && (payload.url || payload.imgName)) {
+                let url = payload.url
+
+                // Fallback for legacy broadcasts or if url missing
+                if (!url && payload.imgName) {
+                    const path = payload.path || `sessions/${sessionId}/${payload.imgName}`
+                    const { data } = supabase.storage.from(bucketName).getPublicUrl(path)
+                    url = data.publicUrl
+                }
 
                 // Replace current image with new one
                 currentImage.value = {
-                    url: data.publicUrl,
+                    url: url,
                     displayName: payload.displayName || getDisplayName(payload.imgName)
                 }
             }
